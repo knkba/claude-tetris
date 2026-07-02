@@ -41,6 +41,8 @@ const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeToggleBtn = document.getElementById('theme-toggle');
 
+let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+
 const THEME_KEY = 'tetris-theme';
 let gridColor, blockHighlight;
 
@@ -71,8 +73,6 @@ themeToggleBtn.addEventListener('click', () => {
 });
 
 applyTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark');
-
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
