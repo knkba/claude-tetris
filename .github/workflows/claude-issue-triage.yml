@@ -1,0 +1,67 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+# Evita ejecuciones solapadas sobre el mismo issue
+concurrency:
+  group: issue-triage-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    # Guard anti-bucle: ignora ediciones hechas por bots (incluido el propio Claude)
+    if: github.event.sender.type != 'Bot'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write        # necesario para añadir labels, comentar y editar el cuerpo
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Issue Triage
+        id: triage
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: >-
+            --allowed-tools
+            "Bash(gh label list:*),Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*)"
+          prompt: |
+            Eres el responsable de triage de issues del repositorio ${{ github.repository }}.
+            Analiza el issue #${{ github.event.issue.number }}.
+
+            Pasos:
+            1. Lee el issue completo:
+               `gh issue view ${{ github.event.issue.number }} --json title,body,labels`
+            2. Consulta los labels DISPONIBLES en el repo: `gh label list`.
+               SOLO puedes usar labels que ya existan. NUNCA crees labels nuevos.
+            3. Determina los labels apropiados (uno o varios) según el contenido del issue
+               y aplícalos:
+               `gh issue edit ${{ github.event.issue.number }} --add-label "<label1>,<label2>"`
+               Si algún label ya no aplica, puedes quitarlo con --remove-label.
+            4. Redacta un DIAGNÓSTICO GENERAL del problema en español, orientado a que otro
+               desarrollador pueda luego implementar la solución. Incluye:
+               - Resumen del problema o solicitud.
+               - Componentes/archivos probablemente afectados (el repo es un Tetris en JS
+                 vanilla: game.js, index.html, style.css).
+               - Posible causa raíz o enfoque de solución sugerido.
+               - Preguntas abiertas o información faltante, si la hay.
+            5. Publica el diagnóstico como comentario:
+               `gh issue comment ${{ github.event.issue.number }} --body "<diagnóstico>"`
+            6. Añade un resumen breve del diagnóstico al CUERPO del issue, dentro de este
+               bloque exacto (reemplázalo si ya existe, no dupliques):
+               <!-- CLAUDE-DIAGNOSIS:START -->
+               ## 🤖 Diagnóstico automático
+               <resumen breve>
+               <!-- CLAUDE-DIAGNOSIS:END -->
+               Preserva TODO el contenido original del cuerpo escrito por el usuario; solo
+               añade o actualiza el bloque delimitado. Aplica el cambio con:
+               `gh issue edit ${{ github.event.issue.number }} --body "<cuerpo completo actualizado>"`
+
+            Sé conciso y directo. No inventes labels que no existan.
