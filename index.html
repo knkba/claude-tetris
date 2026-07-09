@@ -37,6 +37,11 @@
         </div>
 
         <div class="panel-section">
+          <span class="label">COMBO</span>
+          <span class="value" id="combo">0</span>
+        </div>
+
+        <div class="panel-section">
           <span class="label">NEXT</span>
           <canvas id="next-canvas" width="120" height="120"></canvas>
         </div>
@@ -58,7 +63,35 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+
+        <div id="name-entry" class="name-entry hidden">
+          <label for="name-input" class="label">¡Nuevo récord! Nombre</label>
+          <input type="text" id="name-input" maxlength="12" placeholder="Jugador" autocomplete="off" />
+          <button id="name-submit-btn">Guardar</button>
+        </div>
+
+        <div id="records-table-gameover" class="records-container"></div>
+
         <button id="restart-btn">Reiniciar</button>
+      </div>
+    </div>
+
+    <div id="start-screen" class="overlay hidden">
+      <div class="overlay-box">
+        <p id="start-title" class="start-title">RÉCORDS</p>
+        <div id="records-table-start" class="records-container"></div>
+        <div class="start-stats">
+          <div class="panel-section">
+            <span class="label">MEJOR COMBO</span>
+            <span class="value" id="best-combo-start">0</span>
+          </div>
+          <div class="panel-section">
+            <span class="label">LÍNEAS MÁXIMAS</span>
+            <span class="value" id="max-lines-start">0</span>
+          </div>
+        </div>
+        <button id="start-btn">Jugar</button>
+        <button id="reset-records-btn" class="reset-records-btn">Resetear récords</button>
       </div>
     </div>
   </div>
