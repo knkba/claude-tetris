@@ -50,6 +50,10 @@ const controlsToggleBtn = document.getElementById('controls-toggle-btn');
 const controlsBackBtn = document.getElementById('controls-back-btn');
 const startLevelSelect = document.getElementById('start-level-select');
 
+let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let startLevel = 1;
+let pauseMenuOpen = false;
+
 const THEME_KEY = 'tetris-theme';
 let gridColor, blockHighlight;
 
@@ -80,10 +84,6 @@ themeToggleBtn.addEventListener('click', () => {
 });
 
 applyTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark');
-
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
-let startLevel = 1;
-let pauseMenuOpen = false;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
