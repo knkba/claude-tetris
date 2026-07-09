@@ -52,6 +52,9 @@ const maxLinesStartEl = document.getElementById('max-lines-start');
 const resetRecordsBtn = document.getElementById('reset-records-btn');
 const comboEl = document.getElementById('combo');
 
+let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let currentCombo, maxComboThisGame;
+
 const THEME_KEY = 'tetris-theme';
 let gridColor, blockHighlight;
 
@@ -166,9 +169,6 @@ resetRecordsBtn.addEventListener('click', () => {
   renderStartScreenStats();
   renderRecordsTable(recordsTableGameOver);
 });
-
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
-let currentCombo, maxComboThisGame;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
