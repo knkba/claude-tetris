@@ -154,6 +154,17 @@ body {
   border-radius: 4px;
 }
 
+#powerup-status {
+  font-size: 15px;
+  letter-spacing: 0;
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--controls-color);
+  margin-top: 4px;
+}
+
 /* ---- Controles ---- */
 .controls ul {
   list-style: none;

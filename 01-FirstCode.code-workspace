@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "../01-FirstCode"
+		},
+		{
+			"path": "../02-asteroids"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {}
+}

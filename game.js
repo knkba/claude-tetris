@@ -13,7 +13,18 @@ const COLORS = [
   '#e57373', // Z - red
   '#64b5f6', // J - pale blue
   '#ffb74d', // L - orange
+  '#ff5252', // 8  bomba
+  '#fff176', // 9  rayo
+  '#40c4ff', // 10 congelar
 ];
+
+const POWERUPS = [
+  { key: 'bomb', index: 8, icon: '💣', name: 'Bomba' },
+  { key: 'ray', index: 9, icon: '⚡', name: 'Rayo' },
+  { key: 'freeze', index: 10, icon: '❄', name: 'Congelar' },
+];
+const POWER_CHANCE = 0.15;
+const FREEZE_MS = 5000;
 
 const PIECES = [
   null,
@@ -39,9 +50,11 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const powerupStatusEl = document.getElementById('powerup-status');
 const themeToggleBtn = document.getElementById('theme-toggle');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let powerPending, freezeRemaining;
 
 const THEME_KEY = 'tetris-theme';
 let gridColor, blockHighlight;
@@ -79,9 +92,23 @@ function createBoard() {
 }
 
 function randomPiece() {
+  if (powerPending) {
+    powerPending = false;
+    return randomPowerUp();
+  }
   const type = Math.floor(Math.random() * 7) + 1;
   const shape = PIECES[type].map(row => [...row]);
   return { type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
+}
+
+function randomPowerUp() {
+  const p = POWERUPS[Math.floor(Math.random() * POWERUPS.length)];
+  return { type: p.index, power: p.key, shape: [[p.index]], x: Math.floor(COLS / 2), y: 0 };
+}
+
+function iconOf(key) {
+  const p = POWERUPS.find(pu => pu.key === key);
+  return p ? p.icon : '';
 }
 
 function collide(shape, ox, oy) {
@@ -140,6 +167,9 @@ function clearLines() {
     score += (LINE_SCORES[cleared] || 0) * level;
     level = Math.floor(lines / 10) + 1;
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    if (!powerPending && !next.power && Math.random() < POWER_CHANCE) {
+      powerPending = true;
+    }
     updateHUD();
   }
 }
@@ -168,9 +198,36 @@ function softDrop() {
 }
 
 function lockPiece() {
-  merge();
+  if (current.power) applyPowerUp();
+  else merge();
   clearLines();
   spawn();
+}
+
+function applyPowerUp() {
+  const cx = current.x;
+  const cy = current.y;
+  switch (current.power) {
+    case 'bomb':
+      for (let r = cy - 1; r <= cy + 1; r++) {
+        for (let c = cx - 1; c <= cx + 1; c++) {
+          if (r >= 0 && r < ROWS && c >= 0 && c < COLS) board[r][c] = 0;
+        }
+      }
+      break;
+    case 'ray':
+      if (cy >= 0 && cy < ROWS) {
+        for (let c = 0; c < COLS; c++) board[cy][c] = 0;
+      }
+      for (let r = 0; r < ROWS; r++) board[r][cx] = 0;
+      break;
+    case 'freeze':
+      if (cy >= 0 && cy < ROWS) {
+        board[cy][cx] = Math.floor(Math.random() * 7) + 1;
+      }
+      freezeRemaining = FREEZE_MS;
+      break;
+  }
 }
 
 function spawn() {
@@ -186,6 +243,16 @@ function updateHUD() {
   scoreEl.textContent = score.toLocaleString();
   linesEl.textContent = lines;
   levelEl.textContent = level;
+  if (powerupStatusEl) {
+    if (freezeRemaining > 0) {
+      powerupStatusEl.textContent = '❄ Congelado';
+    } else if (next && next.power) {
+      const p = POWERUPS.find(pu => pu.key === next.power);
+      powerupStatusEl.textContent = `${p.icon} ${p.name} ↑`;
+    } else {
+      powerupStatusEl.textContent = '—';
+    }
+  }
 }
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
@@ -198,6 +265,15 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
   context.fillStyle = blockHighlight;
   context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
   context.globalAlpha = 1;
+}
+
+function drawIcon(context, x, y, icon, size) {
+  if (!icon) return;
+  context.fillStyle = '#111';
+  context.font = `${Math.floor(size * 0.6)}px serif`;
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText(icon, x * size + size / 2, y * size + size / 2);
 }
 
 function drawGrid() {
@@ -237,6 +313,8 @@ function draw() {
   for (let r = 0; r < current.shape.length; r++)
     for (let c = 0; c < current.shape[r].length; c++)
       drawBlock(ctx, current.x + c, current.y + r, current.shape[r][c], BLOCK);
+
+  if (current.power) drawIcon(ctx, current.x, current.y, iconOf(current.power), BLOCK);
 }
 
 function drawNext() {
@@ -248,6 +326,8 @@ function drawNext() {
   for (let r = 0; r < shape.length; r++)
     for (let c = 0; c < shape[r].length; c++)
       drawBlock(nextCtx, offX + c, offY + r, shape[r][c], NB);
+
+  if (next.power) drawIcon(nextCtx, offX, offY, iconOf(next.power), NB);
 }
 
 function endGame() {
@@ -262,6 +342,7 @@ function togglePause() {
   if (gameOver) return;
   paused = !paused;
   if (!paused) {
+    overlay.classList.add('hidden');
     lastTime = performance.now();
     loop(lastTime);
   } else {
@@ -273,18 +354,26 @@ function togglePause() {
 }
 
 function loop(ts) {
+  if (gameOver || paused) return;
   const dt = ts - lastTime;
   lastTime = ts;
-  dropAccum += dt;
-  if (dropAccum >= dropInterval) {
+  if (freezeRemaining > 0) {
+    freezeRemaining = Math.max(0, freezeRemaining - dt);
     dropAccum = 0;
-    if (!collide(current.shape, current.x, current.y + 1)) {
-      current.y++;
-    } else {
-      lockPiece();
+    if (freezeRemaining === 0) updateHUD();
+  } else {
+    dropAccum += dt;
+    if (dropAccum >= dropInterval) {
+      dropAccum = 0;
+      if (!collide(current.shape, current.x, current.y + 1)) {
+        current.y++;
+      } else {
+        lockPiece();
+      }
     }
   }
   draw();
+  if (gameOver) return;
   animId = requestAnimationFrame(loop);
 }
 
@@ -297,6 +386,8 @@ function init() {
   gameOver = false;
   dropInterval = 1000;
   dropAccum = 0;
+  powerPending = false;
+  freezeRemaining = 0;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
